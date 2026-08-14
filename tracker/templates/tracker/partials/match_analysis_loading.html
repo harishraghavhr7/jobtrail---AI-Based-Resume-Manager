@@ -1,0 +1,11 @@
+<div class="bg-darkCard border border-darkBorder rounded-2xl p-8 text-center flex flex-col items-center justify-center py-12"
+     hx-get="{% url 'check_analysis_status' application.id %}" 
+     hx-trigger="every 2s" 
+     hx-swap="outerHTML">
+    
+    <!-- Spinner loader -->
+    <div class="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+    
+    <h4 class="text-slate-200 font-bold text-sm">Groq AI is analyzing match...</h4>
+    <p class="text-xs text-slate-500 max-w-xs mt-1">Comparing resume skills against job description qualifications. This should take just a moment.</p>
+</div>

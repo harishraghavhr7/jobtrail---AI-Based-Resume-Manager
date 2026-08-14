@@ -1,0 +1,119 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Applications - JobTrail{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ viewMode: '{{ view_mode }}', bulkOpen: false }">
+    
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white">Job Applications</h1>
+            <p class="text-slate-400 text-sm mt-1">Manage and track your active applications and interviews.</p>
+        </div>
+        <div>
+            <a href="{% url 'application_create' %}" 
+               class="px-4 py-2.5 bg-gradient-to-r from-brandPurple to-brandIndigo text-white rounded-xl shadow-lg shadow-indigo-500/20 hover:opacity-90 transition-all text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> New Application
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search Toolbar -->
+    <div class="bg-darkCard border border-darkBorder rounded-2xl p-5">
+        <form id="filter-form" method="GET" action="{% url 'applications_list' %}"
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
+              hx-get="{% url 'applications_list' %}"
+              hx-trigger="change, keyup changed delay:400ms from:#search-input"
+              hx-target="#list-container"
+              hx-push-url="true">
+            
+            <!-- View Mode Hidden Input -->
+            <input type="hidden" name="view" id="view-mode-input" :value="viewMode">
+            <input type="hidden" name="sort_by" id="sort-by-input" value="{{ sort_by }}">
+
+            <!-- Search Field -->
+            <div class="relative lg:col-span-2">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <input type="text" name="search" id="search-input" value="{{ search_query }}"
+                       class="block w-full pl-10 pr-3 py-2 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all" 
+                       placeholder="Search company or job role...">
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <select name="status" class="block w-full px-3 py-2 bg-darkBg border border-darkBorder rounded-xl text-slate-300 focus:outline-none focus:ring-2 focus:ring-brandIndigo text-sm transition-all">
+                    <option value="">All Statuses</option>
+                    {% for val, name in status_choices %}
+                        <option value="{{ val }}" {% if val == status_filter %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Company Filter -->
+            <div>
+                <select name="company" class="block w-full px-3 py-2 bg-darkBg border border-darkBorder rounded-xl text-slate-300 focus:outline-none focus:ring-2 focus:ring-brandIndigo text-sm transition-all">
+                    <option value="">All Companies</option>
+                    {% for comp in companies_list %}
+                        <option value="{{ comp }}" {% if comp == company_filter %}selected{% endif %}>{{ comp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div>
+                <select name="date_range" class="block w-full px-3 py-2 bg-darkBg border border-darkBorder rounded-xl text-slate-300 focus:outline-none focus:ring-2 focus:ring-brandIndigo text-sm transition-all">
+                    <option value="">All Time</option>
+                    <option value="7days" {% if date_filter == '7days' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30days" {% if date_filter == '30days' %}selected{% endif %}>Last 30 Days</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Toggle Controls & Bulk Actions Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        
+        <!-- View Mode Toggle Buttons -->
+        <div class="inline-flex bg-darkCard border border-darkBorder p-1 rounded-xl">
+            <button @click="viewMode = 'table'; $nextTick(() => htmx.trigger('#filter-form', 'change'))"
+                    class="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
+                    :class="viewMode === 'table' ? 'bg-darkBorder text-white' : 'text-slate-400 hover:text-slate-200'">
+                <i class="fa-solid fa-table-list"></i> Table View
+            </button>
+            <button @click="viewMode = 'kanban'; $nextTick(() => htmx.trigger('#filter-form', 'change'))"
+                    class="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all"
+                    :class="viewMode === 'kanban' ? 'bg-darkBorder text-white' : 'text-slate-400 hover:text-slate-200'">
+                <i class="fa-solid fa-grip-vertical"></i> Kanban View
+            </button>
+        </div>
+
+        <!-- Sorting Info and Toggle (Only relevant in Table Mode) -->
+        <div x-show="viewMode === 'table'" class="flex items-center gap-2 text-sm text-slate-400">
+            <span>Sort by:</span>
+            <select onchange="document.getElementById('sort-by-input').value = this.value; htmx.trigger('#filter-form', 'change')"
+                    class="bg-transparent border-0 focus:ring-0 text-slate-200 font-semibold cursor-pointer py-0.5">
+                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Date Added (Newest)</option>
+                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Date Added (Oldest)</option>
+                <option value="company" {% if sort_by == 'company' %}selected{% endif %}>Company (A-Z)</option>
+                <option value="-company" {% if sort_by == '-company' %}selected{% endif %}>Company (Z-A)</option>
+                <option value="application_date" {% if sort_by == 'application_date' %}selected{% endif %}>Apply Date (Asc)</option>
+                <option value="-application_date" {% if sort_by == '-application_date' %}selected{% endif %}>Apply Date (Desc)</option>
+                <option value="-match__match_percentage" {% if sort_by == '-match__match_percentage' %}selected{% endif %}>Match Score (High-Low)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Active List Container (Dynamic swap area) -->
+    <div id="list-container" class="min-h-[250px] relative">
+        {% if view_mode == 'kanban' %}
+            {% include 'tracker/partials/kanban_board.html' %}
+        {% else %}
+            {% include 'tracker/partials/applications_table.html' %}
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

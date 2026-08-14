@@ -1,0 +1,150 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}
+    {% if is_signup %}Sign Up - JobTrail{% else %}Login - JobTrail{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        
+        <!-- App Title and Brand -->
+        <div class="text-center">
+            <div class="mx-auto h-12 w-12 rounded-xl bg-gradient-to-tr from-brandPurple to-brandIndigo flex items-center justify-center shadow-xl shadow-indigo-500/25">
+                <i class="fa-solid fa-compass-drafting text-white text-2xl"></i>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                {% if is_signup %}Create your account{% else %}Welcome back{% endif %}
+            </h2>
+            <p class="mt-2 text-sm text-slate-400">
+                {% if is_signup %}
+                    Track applications with AI, optimize your resumes, land the offer.
+                {% else %}
+                    Sign in to manage your applications pipeline.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Card Container -->
+        <div class="bg-darkCard border border-darkBorder rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
+            <form class="space-y-6" method="POST" action="{% if is_signup %}{% url 'signup' %}{% else %}{% url 'login' %}{% endif %}">
+                {% csrf_token %}
+                
+                <!-- Form Inputs -->
+                <div class="space-y-4">
+                    
+                    <!-- Username / Email Field -->
+                    <div>
+                        <label for="id_username" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Username</label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <input id="id_username" name="username" type="text" required 
+                                   class="block w-full pl-10 pr-3 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent transition-all text-sm" 
+                                   placeholder="Your username">
+                        </div>
+                    </div>
+                    
+                    <!-- Password Field -->
+                    <div>
+                        <label for="id_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <input id="id_password" name="password" type="password" required 
+                                   class="block w-full pl-10 pr-3 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent transition-all text-sm" 
+                                   placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    {% if is_signup %}
+                    <!-- Confirm Password (hidden in standard auth forms if we use custom fields, but Django's default signup needs it.
+                         If using UserCreationForm, it includes helper labels.
+                         Wait, since we are rendering the forms manually, if we use default UserCreationForm, it has:
+                         - username
+                         - password1
+                         - password2
+                         Let's adapt the fields to match UserCreationForm's naming conventions!) -->
+                    <div>
+                        <label for="id_password1" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <input id="id_password1" name="password1" type="password" required 
+                                   class="block w-full pl-10 pr-3 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent transition-all text-sm" 
+                                   placeholder="••••••••">
+                        </div>
+                        <p class="mt-1 text-slate-500 text-xs">Must be at least 8 characters.</p>
+                    </div>
+
+                    <div>
+                        <label for="id_password2" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Confirm Password</label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-check-double"></i>
+                            </div>
+                            <input id="id_password2" name="password2" type="password" required 
+                                   class="block w-full pl-10 pr-3 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent transition-all text-sm" 
+                                   placeholder="••••••••">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" 
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brandPurple to-brandIndigo hover:opacity-90 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brandIndigo transition-all shadow-lg shadow-indigo-500/25">
+                        {% if is_signup %}Create Account{% else %}Sign In{% endif %}
+                    </button>
+                </div>
+            </form>
+
+            <!-- Divider -->
+            <div class="mt-6 flex items-center justify-between">
+                <span class="w-1/5 border-b border-darkBorder lg:w-1/4"></span>
+                <span class="text-xs text-center text-slate-500 uppercase">Or continue with</span>
+                <span class="w-1/5 border-b border-darkBorder lg:w-1/4"></span>
+            </div>
+
+            <!-- Sign in with Google (Optional, Visual only) -->
+            <div class="mt-4">
+                <button type="button" onclick="alert('Google Auth is a visual demo!')"
+                        class="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-darkBg border border-darkBorder rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-darkBorder/40 transition-colors">
+                    <i class="fa-brands fa-google text-slate-400"></i>
+                    Sign in with Google
+                </button>
+            </div>
+            
+            <!-- Toggle Link -->
+            <div class="mt-8 text-center text-sm text-slate-400">
+                {% if is_signup %}
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="font-semibold text-brandPurple hover:text-brandIndigo transition-colors ml-1">Sign in here</a>
+                {% else %}
+                    Don't have an account? 
+                    <a href="{% url 'signup' %}" class="font-semibold text-brandPurple hover:text-brandIndigo transition-colors ml-1">Sign up here</a>
+                {% endif %}
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+{% if is_signup %}
+<!-- Adapt input fields for UserCreationForm submit when manually rendering -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector('form');
+        // If it is signup, we need to bind standard Django name fields
+        // Django's UserCreationForm expects 'username', 'password1', 'password2'
+        // We set id_username to name="username" which is correct
+        // We set id_password1 to name="password1" which is correct
+        // We set id_password2 to name="password2" which is correct
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,149 @@
+<div x-data="{
+    selected: [],
+    allChecked: false,
+    toggleAll() {
+        this.allChecked = !this.allChecked;
+        if (this.allChecked) {
+            this.selected = Array.from(document.querySelectorAll('input[name=selected_ids]')).map(el => el.value);
+        } else {
+            this.selected = [];
+        }
+    },
+    toggleItem(id) {
+        if (this.selected.includes(id)) {
+            this.selected = this.selected.filter(item => item !== id);
+        } else {
+            this.selected.push(id);
+        }
+        this.allChecked = this.selected.length === document.querySelectorAll('input[name=selected_ids]').length;
+    }
+}" class="space-y-4">
+
+    <!-- Bulk Actions Banner (appears when items are selected) -->
+    <div x-show="selected.length > 0" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-2"
+         class="bg-indigo-950/60 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div class="flex items-center gap-2 text-sm text-indigo-200">
+            <i class="fa-solid fa-circle-check text-indigo-400"></i>
+            <span class="font-bold" x-text="selected.length"></span> applications selected
+        </div>
+        
+        <form method="POST" action="{% url 'bulk_action' %}" class="flex flex-wrap items-center gap-2">
+            {% csrf_token %}
+            <!-- Hidden fields to pass selected ids -->
+            <template x-for="id in selected" :key="id">
+                <input type="hidden" name="selected_ids" :value="id">
+            </template>
+            
+            <span class="text-xs uppercase tracking-wider text-indigo-300 font-semibold mr-1">Actions:</span>
+            <button type="submit" name="action" value="status_applied" class="px-3 py-1 bg-darkBg hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg border border-darkBorder transition-colors">Mark Applied</button>
+            <button type="submit" name="action" value="status_interview" class="px-3 py-1 bg-darkBg hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg border border-darkBorder transition-colors">Mark Interview</button>
+            <button type="submit" name="action" value="status_offer" class="px-3 py-1 bg-darkBg hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg border border-darkBorder transition-colors">Mark Offer</button>
+            <button type="submit" name="action" value="status_rejected" class="px-3 py-1 bg-darkBg hover:bg-slate-800 text-xs font-semibold text-slate-300 rounded-lg border border-darkBorder transition-colors">Mark Rejected</button>
+            <button type="submit" name="action" value="delete" onclick="return confirm('Are you sure you want to delete these applications?')" class="px-3 py-1 bg-rose-500/10 hover:bg-rose-500 text-xs font-semibold text-rose-400 hover:text-white rounded-lg border border-rose-500/20 transition-all">Delete Selected</button>
+        </form>
+    </div>
+
+    <!-- Table Container -->
+    <div class="bg-darkCard border border-darkBorder rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+            {% if not applications %}
+            <div class="py-16 text-center">
+                <div class="w-12 h-12 bg-slate-800/40 rounded-full flex items-center justify-center text-slate-500 text-xl mx-auto mb-3 border border-darkBorder">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h4 class="text-slate-200 font-bold">No applications found</h4>
+                <p class="text-slate-500 text-sm mt-1">Try adjusting your filters or add a new application.</p>
+            </div>
+            {% else %}
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="border-b border-darkBorder text-slate-400 font-semibold bg-darkBg/20 select-none">
+                        <th class="py-4 pl-6 pr-4 w-12 text-center">
+                            <input type="checkbox" :checked="allChecked" @click="toggleAll()"
+                                   class="rounded bg-darkBg border-darkBorder text-brandIndigo focus:ring-brandIndigo focus:ring-offset-darkCard w-4 h-4 cursor-pointer">
+                        </th>
+                        <th class="py-4 px-4 font-bold">Company</th>
+                        <th class="py-4 px-4 font-bold">Role</th>
+                        <th class="py-4 px-4 font-bold">Apply Date</th>
+                        <th class="py-4 px-4 font-bold">Status</th>
+                        <th class="py-4 px-4 font-bold text-center">Match %</th>
+                        <th class="py-4 px-4 font-bold">Resume Version</th>
+                        <th class="py-4 pr-6 pl-4 text-right font-bold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-darkBorder/40">
+                    {% for app in applications %}
+                    <tr class="hover:bg-darkBorder/10 transition-colors duration-200">
+                        <td class="py-4 pl-6 pr-4 text-center">
+                            <input type="checkbox" name="selected_ids" value="{{ app.id }}" 
+                                   :checked="selected.includes('{{ app.id }}')" @change="toggleItem('{{ app.id }}')"
+                                   class="rounded bg-darkBg border-darkBorder text-brandIndigo focus:ring-brandIndigo focus:ring-offset-darkCard w-4 h-4 cursor-pointer">
+                        </td>
+                        <td class="py-4 px-4 font-bold text-slate-100 hover:text-brandIndigo transition-colors">
+                            <a href="{% url 'application_detail' app.id %}">{{ app.company }}</a>
+                        </td>
+                        <td class="py-4 px-4 text-slate-300">{{ app.job_role }}</td>
+                        <td class="py-4 px-4 text-slate-400">{{ app.application_date|date:"M d, Y" }}</td>
+                        <td class="py-4 px-4">
+                            {% if app.status == 'applied' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Applied</span>
+                            {% elif app.status == 'oa' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">OA</span>
+                            {% elif app.status == 'interview' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Interview</span>
+                            {% elif app.status == 'technical' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">Technical</span>
+                            {% elif app.status == 'hr' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">HR Round</span>
+                            {% elif app.status == 'offer' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Offer</span>
+                            {% elif app.status == 'rejected' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">Rejected</span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">Withdrawn</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            {% if app.match %}
+                                <span class="font-bold px-2 py-1 rounded text-xs {% if app.match.match_percentage >= 75 %}bg-emerald-500/10 text-emerald-400{% elif app.match.match_percentage >= 50 %}bg-amber-500/10 text-amber-400{% else %}bg-slate-800 text-slate-400{% endif %}">
+                                    {{ app.match.match_percentage }}%
+                                </span>
+                            {% else %}
+                                <span class="text-slate-500 text-xs italic">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-slate-400 font-medium">
+                            {% if app.resume %}
+                                <i class="fa-solid fa-file-pdf mr-1 text-red-400/80"></i> {{ app.resume.version_name }}
+                            {% else %}
+                                <span class="text-slate-500 text-xs italic">None Linked</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 pr-6 pl-4 text-right flex items-center justify-end gap-3">
+                            <a href="{% url 'application_detail' app.id %}" class="text-slate-400 hover:text-white transition-colors" title="View details">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{% url 'application_edit' app.id %}" class="text-slate-400 hover:text-indigo-400 transition-colors" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                            <form method="POST" action="{% url 'application_delete' app.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" onclick="return confirm('Are you sure you want to delete this application?')" class="text-slate-400 hover:text-rose-400 transition-colors" title="Delete">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>

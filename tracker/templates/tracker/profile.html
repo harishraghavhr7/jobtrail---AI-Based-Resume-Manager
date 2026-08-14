@@ -1,0 +1,174 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Settings - JobTrail{% endblock %}
+
+{% block content %}
+<div class="space-y-8" x-data="{ deleteConfirm: false }">
+    
+    <!-- Header -->
+    <div>
+        <h1 class="text-3xl font-extrabold text-white">Account Settings</h1>
+        <p class="text-slate-400 text-sm mt-1">Manage your account information, target job roles, export application records, or close account.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Side: Profile Form and Password Form -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Update Profile Form -->
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-6">
+                <h3 class="text-base font-bold text-white border-b border-darkBorder/40 pb-2 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-user-circle text-indigo-400"></i> Profile Information
+                </h3>
+                
+                <form method="POST" action="{% url 'profile' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_profile">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- First Name -->
+                        <div>
+                            <label for="first_name" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">First Name</label>
+                            <input type="text" name="first_name" id="first_name" value="{{ user.first_name }}"
+                                   class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                                   placeholder="First name">
+                        </div>
+                        
+                        <!-- Last Name -->
+                        <div>
+                            <label for="last_name" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
+                            <input type="text" name="last_name" id="last_name" value="{{ user.last_name }}"
+                                   class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                                   placeholder="Last name">
+                        </div>
+                    </div>
+
+                    <!-- Email Address -->
+                    <div>
+                        <label for="email" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Email Address</label>
+                        <input type="email" name="email" id="email" value="{{ user.email }}"
+                               class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                               placeholder="name@example.com">
+                    </div>
+
+                    <!-- Target Job Role -->
+                    <div>
+                        <label for="target_role" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Target Job Role</label>
+                        <input type="text" name="target_role" id="target_role" value="{% if profile.target_role %}{{ profile.target_role }}{% endif %}"
+                               class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                               placeholder="e.g. Senior Django Developer">
+                        <p class="text-[10px] text-slate-500 mt-1">Helps tailor generic metrics and dashboards to your targets.</p>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit"
+                                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-500/10 transition-all">
+                            Save Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Password Change Form -->
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-6">
+                <h3 class="text-base font-bold text-white border-b border-darkBorder/40 pb-2 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-400"></i> Change Password
+                </h3>
+                
+                <form method="POST" action="{% url 'profile' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+                    
+                    <!-- Current Password -->
+                    <div>
+                        <label for="current_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Current Password</label>
+                        <input type="password" name="current_password" id="current_password" required
+                               class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                               placeholder="••••••••">
+                    </div>
+
+                    <!-- New Password -->
+                    <div>
+                        <label for="new_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">New Password</label>
+                        <input type="password" name="new_password" id="new_password" required
+                               class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                               placeholder="••••••••">
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirm_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Confirm New Password</label>
+                        <input type="password" name="confirm_password" id="confirm_password" required
+                               class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                               placeholder="••••••••">
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit"
+                                class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-500/10 transition-all">
+                            Change Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Right Side: Export and Danger Zone -->
+        <div class="lg:col-span-1 space-y-6">
+            
+            <!-- Data Export Box -->
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-6 space-y-4">
+                <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-darkBorder/40 pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-file-export text-indigo-400"></i> Export Application Data
+                </h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Download all your applications, statuses, notes, and AI analysis reports as backup spreadsheets or JSON payloads.
+                </p>
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <a href="{% url 'export_data' %}?format=csv"
+                       class="px-4 py-2 bg-darkBg hover:bg-slate-800 border border-darkBorder text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+                    </a>
+                    <a href="{% url 'export_data' %}?format=json"
+                       class="px-4 py-2 bg-darkBg hover:bg-slate-800 border border-darkBorder text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-file-code text-amber-400"></i> Export JSON
+                    </a>
+                </div>
+            </div>
+
+            <!-- Danger Zone Box -->
+            <div class="bg-darkCard border border-rose-500/20 rounded-2xl p-6 space-y-4">
+                <h3 class="text-sm font-bold text-rose-400 uppercase tracking-wider border-b border-rose-500/10 pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-skull-crossbones text-rose-500"></i> Danger Zone
+                </h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Once you delete your account, there is no going back. All tracked applications, history transition logs, match scores, and resumes will be wiped permanently.
+                </p>
+                
+                <div class="pt-2">
+                    <button type="button" @click="deleteConfirm = true" x-show="!deleteConfirm"
+                            class="w-full px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/25 rounded-xl text-xs font-semibold transition-all">
+                        Delete Account
+                    </button>
+                    
+                    <!-- Confirm Delete block -->
+                    <div x-show="deleteConfirm" class="space-y-3" style="display: none;">
+                        <p class="text-[11px] text-rose-400 font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Are you absolutely sure?</p>
+                        <form method="POST" action="{% url 'delete_account' %}" class="flex gap-2">
+                            {% csrf_token %}
+                            <button type="button" @click="deleteConfirm = false"
+                                    class="flex-grow px-3 py-1.5 bg-darkBg border border-darkBorder hover:bg-slate-800 text-slate-400 text-xs font-semibold rounded-lg">Cancel</button>
+                            <button type="submit"
+                                    class="flex-grow px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition-colors">Yes, Delete Account</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}

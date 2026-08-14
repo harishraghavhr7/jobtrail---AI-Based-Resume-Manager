@@ -1,0 +1,13 @@
+Django>=5.0
+djangorestframework
+groq
+pdfplumber
+python-docx
+python-dotenv
+celery
+redis
+django-celery-results
+gunicorn
+dj-database-url
+psycopg2-binary
+whitenoise

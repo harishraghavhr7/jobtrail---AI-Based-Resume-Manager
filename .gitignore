@@ -1,0 +1,32 @@
+# Django-specific ignore patterns
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+/media
+/static_root
+
+# Virtual Environment
+venv/
+Venv/
+ENV/
+env/
+.venv/
+
+# Environment configurations
+.env
+
+# Antigravity brain / tasks directories
+.gemini/
+.system_generated/
+/scratch/
+/brain/
+
+# System files
+.DS_Store
+Thumbs.db

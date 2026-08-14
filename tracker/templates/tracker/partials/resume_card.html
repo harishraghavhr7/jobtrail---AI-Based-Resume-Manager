@@ -1,0 +1,71 @@
+<div class="bg-darkCard border border-darkBorder rounded-2xl p-5 hover:border-indigo-500/30 transition-all duration-300 flex flex-col gap-4 relative group">
+    
+    <!-- Top info -->
+    <div class="flex justify-between items-start gap-3">
+        <div class="space-y-1">
+            <h3 class="font-bold text-slate-100 flex items-center gap-1.5 text-sm">
+                <i class="fa-solid fa-file-pdf text-red-500/80"></i>
+                {{ resume.version_name }}
+            </h3>
+            <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                Uploaded {{ resume.created_at|date:"M d, Y" }}
+            </p>
+        </div>
+
+        <!-- Active Badge -->
+        {% if resume.is_active %}
+        <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
+            Active
+        </span>
+        {% else %}
+        <!-- Inactive action trigger -->
+        <form method="POST" action="{% url 'set_active_resume' resume.id %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="px-2 py-0.5 rounded-md bg-darkBg hover:bg-slate-800 text-slate-500 hover:text-slate-300 text-[10px] font-bold uppercase tracking-wider border border-darkBorder transition-all">
+                Set Active
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Skills List (Chips) -->
+    <div class="flex-grow">
+        <h4 class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-2">Parsed Skills ({{ resume.parsed_skills|length }})</h4>
+        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+            {% for skill in resume.parsed_skills %}
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px] font-medium border border-darkBorder/40">
+                {{ skill }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Bottom Actions panel -->
+    <div class="border-t border-darkBorder/40 pt-3 flex justify-between items-center text-xs">
+        <a href="{{ resume.file.url }}" download class="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-download"></i> Download PDF
+        </a>
+        
+        <div class="flex items-center gap-3">
+            <!-- Re-parse action -->
+            <form method="POST" action="{% url 'reparse_resume_skills' resume.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" title="Re-parse skills using Groq" class="text-slate-500 hover:text-slate-300 transition-colors">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </form>
+            
+            <!-- Delete action triggers warnings fetch via HTMX -->
+            <button type="button" 
+                    hx-get="{% url 'delete_resume_warning' resume.id %}"
+                    hx-target="#delete-modal-content"
+                    hx-swap="innerHTML"
+                    @click="deleteModal = true"
+                    class="text-slate-500 hover:text-rose-400 transition-colors"
+                    title="Delete resume">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+    </div>
+
+</div>

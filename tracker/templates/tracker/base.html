@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}JobTrail - AI Job Tracker{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        darkBg: '#090D1A',
+                        darkCard: '#121829',
+                        darkBorder: '#1F293D',
+                        brandPurple: '#8B5CF6',
+                        brandIndigo: '#6366F1',
+                        brandDark: '#1E1B4B'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- HTMX and Alpine.js -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom styling overrides -->
+    <style>
+        body {
+            background-color: #090D1A;
+            color: #E2E8F0;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090D1A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F293D;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col font-sans" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+    <!-- Notification Toasts with Alpine.js -->
+    <div class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none" 
+         x-data="{ 
+             messages: [
+                 {% if messages %}
+                     {% for message in messages %}
+                         { id: {{ forloop.counter }}, text: '{{ message|escapejs }}', tags: '{{ message.tags }}', show: true },
+                     {% endfor %}
+                 {% endif %}
+             ],
+             remove(id) {
+                 this.messages = this.messages.filter(m => m.id !== id);
+             }
+         }">
+        <template x-for="msg in messages" :key="msg.id">
+            <div x-show="msg.show" 
+                 x-init="setTimeout(() => { msg.show = false; setTimeout(() => remove(msg.id), 500) }, 4000)"
+                 x-transition:enter="transition ease-out duration-300 transform"
+                 x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+                 x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="max-w-md w-80 bg-darkCard border border-darkBorder rounded-xl shadow-2xl pointer-events-auto overflow-hidden p-4 flex gap-3">
+                 
+                <!-- Icon -->
+                <div class="flex-shrink-0 flex items-center justify-center">
+                    <template x-if="msg.tags === 'success'">
+                        <span class="text-emerald-400 text-lg"><i class="fa-solid fa-circle-check"></i></span>
+                    </template>
+                    <template x-if="msg.tags === 'error'">
+                        <span class="text-rose-400 text-lg"><i class="fa-solid fa-circle-xmark"></i></span>
+                    </template>
+                    <template x-if="msg.tags === 'warning'">
+                        <span class="text-amber-400 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    </template>
+                    <template x-if="msg.tags !== 'success' && msg.tags !== 'error' && msg.tags !== 'warning'">
+                        <span class="text-blue-400 text-lg"><i class="fa-solid fa-circle-info"></i></span>
+                    </template>
+                </div>
+                
+                <!-- Content -->
+                <div class="flex-grow">
+                    <p class="text-sm font-medium text-slate-200" x-text="msg.text"></p>
+                </div>
+                
+                <!-- Close Button -->
+                <button @click="msg.show = false" class="text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0 align-top">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="bg-darkCard border-b border-darkBorder sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                
+                <!-- Logo -->
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-2 group">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-brandPurple to-brandIndigo flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-all duration-300">
+                        <i class="fa-solid fa-compass-drafting text-white text-lg"></i>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">JobTrail</span>
+                </a>
+
+                {% if user.is_authenticated %}
+                <!-- Middle Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="{% url 'dashboard' %}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'dashboard' %}text-white bg-darkBorder/60 border border-darkBorder{% else %}text-slate-400 hover:text-slate-200 hover:bg-darkBorder/30{% endif %}">
+                        <i class="fa-solid fa-chart-pie mr-2"></i>Dashboard
+                    </a>
+                    <a href="{% url 'applications_list' %}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'applications_list' or 'application_' in request.resolver_match.url_name %}text-white bg-darkBorder/60 border border-darkBorder{% else %}text-slate-400 hover:text-slate-200 hover:bg-darkBorder/30{% endif %}">
+                        <i class="fa-solid fa-briefcase mr-2"></i>Applications
+                    </a>
+                    <a href="{% url 'resume_manager' %}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'resume_manager' %}text-white bg-darkBorder/60 border border-darkBorder{% else %}text-slate-400 hover:text-slate-200 hover:bg-darkBorder/30{% endif %}">
+                        <i class="fa-solid fa-file-invoice mr-2"></i>Resumes
+                    </a>
+                </nav>
+
+                <!-- User Dropdown with Alpine.js -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2 focus:outline-none p-1 rounded-lg hover:bg-darkBorder/40 transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brandPurple to-brandIndigo flex items-center justify-center font-bold text-white shadow-sm border border-indigo-400/20">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                        <span class="text-sm font-medium text-slate-300 hidden sm:inline">{{ user.username }}</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+                    </button>
+                    
+                    <!-- Dropdown List -->
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         class="absolute right-0 mt-2 w-48 bg-darkCard border border-darkBorder rounded-xl shadow-2xl py-1 z-50 text-sm">
+                        
+                        <div class="px-4 py-2 border-b border-darkBorder text-slate-400 text-xs">
+                            Logged in as <span class="text-slate-200 font-semibold">{{ user.username }}</span>
+                        </div>
+                        
+                        <!-- Mobile navigation inside dropdown -->
+                        <div class="md:hidden border-b border-darkBorder py-1">
+                            <a href="{% url 'dashboard' %}" class="flex items-center gap-2 px-4 py-2 text-slate-300 hover:bg-darkBorder/40">
+                                <i class="fa-solid fa-chart-pie w-4"></i> Dashboard
+                            </a>
+                            <a href="{% url 'applications_list' %}" class="flex items-center gap-2 px-4 py-2 text-slate-300 hover:bg-darkBorder/40">
+                                <i class="fa-solid fa-briefcase w-4"></i> Applications
+                            </a>
+                            <a href="{% url 'resume_manager' %}" class="flex items-center gap-2 px-4 py-2 text-slate-300 hover:bg-darkBorder/40">
+                                <i class="fa-solid fa-file-invoice w-4"></i> Resumes
+                            </a>
+                        </div>
+                        
+                        <a href="{% url 'profile' %}" class="flex items-center gap-2 px-4 py-2 text-slate-300 hover:bg-darkBorder/40 transition-colors">
+                            <i class="fa-solid fa-user-gear text-slate-400"></i> Settings
+                        </a>
+                        <a href="{% url 'logout' %}" class="flex items-center gap-2 px-4 py-2 text-rose-400 hover:bg-rose-500/10 transition-colors border-t border-darkBorder">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-rose-500"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'login' %}" class="text-sm font-medium text-slate-300 hover:text-white transition-colors">Login</a>
+                    <a href="{% url 'signup' %}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-brandPurple to-brandIndigo text-sm font-medium text-white shadow-lg shadow-indigo-500/20 hover:opacity-90 transition-all">Sign Up</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#060A14] border-t border-darkBorder py-6 text-center text-sm text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>&copy; 2026 JobTrail. Empowered by the Groq API. Build smart, land faster.</p>
+        </div>
+    </footer>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

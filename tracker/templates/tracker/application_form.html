@@ -1,0 +1,179 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}
+    {% if application %}Edit Application - {{ application.company }}{% else %}New Application - JobTrail{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ 
+    resumeSelected: '{% if application.resume %}{{ application.resume.id }}{% endif %}',
+    jdText: `{% if application %}{{ application.jd_text|escapejs }}{% endif %}`,
+    isFilled() {
+        return this.resumeSelected && this.jdText.trim().length > 0;
+    }
+}">
+    
+    <!-- Header -->
+    <div>
+        <h1 class="text-3xl font-extrabold text-white">
+            {% if application %}Edit Application{% else %}Add New Application{% endif %}
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+            {% if application %}Update job listing details, notes, or run another AI match check.{% else %}Track a new position. Link an uploaded resume to perform instant AI compatibility checks.{% endif %}
+        </p>
+    </div>
+
+    <!-- Two Column Form -->
+    <form method="POST" action="{% if application %}{% url 'application_edit' application.id %}{% else %}{% url 'application_create' %}{% endif %}" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {% csrf_token %}
+        
+        <!-- Left Column: Details -->
+        <div class="bg-darkCard border border-darkBorder rounded-2xl p-6 space-y-6">
+            <h3 class="text-lg font-bold text-white border-b border-darkBorder/40 pb-3"><i class="fa-solid fa-circle-info text-indigo-400 mr-2"></i>Position Details</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Company Name -->
+                <div>
+                    <label for="company" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Company <span class="text-rose-500">*</span></label>
+                    <input type="text" name="company" id="company" required value="{% if application %}{{ application.company }}{% endif %}"
+                           class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                           placeholder="e.g. Google">
+                </div>
+
+                <!-- Job Role -->
+                <div>
+                    <label for="job_role" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Job Role <span class="text-rose-500">*</span></label>
+                    <input type="text" name="job_role" id="job_role" required value="{% if application %}{{ application.job_role }}{% endif %}"
+                           class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                           placeholder="e.g. Backend Engineer">
+                </div>
+            </div>
+
+            <!-- Job URL -->
+            <div>
+                <label for="job_url" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Job Posting URL</label>
+                <input type="url" name="job_url" id="job_url" value="{% if application.job_url %}{{ application.job_url }}{% endif %}"
+                       class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                       placeholder="e.g. https://careers.google.com/jobs/results/...">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Apply Date -->
+                <div>
+                    <label for="application_date" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Application Date <span class="text-rose-500">*</span></label>
+                    <input type="date" name="application_date" id="application_date" required 
+                           value="{% if application %}{{ application_date_formatted }}{% else %}{{ today }}{% endif %}"
+                           class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all">
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Current Status <span class="text-rose-500">*</span></label>
+                    <select name="status" id="status" required
+                            class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all">
+                        {% for val, name in status_choices %}
+                            <option value="{{ val }}" {% if application.status == val %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Resume Link -->
+            <div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label for="resume" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Select Resume Version</label>
+                    <a href="{% url 'resume_manager' %}" class="text-[11px] font-bold text-brandPurple hover:text-brandIndigo transition-colors">
+                        <i class="fa-solid fa-upload"></i> Manage Resumes
+                    </a>
+                </div>
+                {% if not resumes %}
+                <div class="p-3 bg-rose-500/5 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center justify-between">
+                    <span><i class="fa-solid fa-circle-exclamation mr-1.5"></i>No active resumes uploaded.</span>
+                    <a href="{% url 'resume_manager' %}" class="underline font-bold">Upload one now</a>
+                </div>
+                <input type="hidden" id="resume" name="resume" value="">
+                {% else %}
+                <select name="resume" id="resume" x-model="resumeSelected"
+                        class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all">
+                    <option value="">-- Select Resume --</option>
+                    {% for res in resumes %}
+                        <option value="{{ res.id }}">{{ res.version_name }} ({{ res.created_at|date:"M d, Y" }})</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Personal Notes / Thoughts</label>
+                <textarea name="notes" id="notes" rows="4"
+                          class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                          placeholder="Salary range, contact person, referral details, recruiter phone call scheduled..."></textarea>
+            </div>
+        </div>
+
+        <!-- Right Column: JD and AI Match Analysis -->
+        <div class="flex flex-col gap-6">
+            
+            <!-- Job Description Box -->
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-6">
+                <h3 class="text-lg font-bold text-white border-b border-darkBorder/40 pb-3 mb-4 flex justify-between items-center">
+                    <span><i class="fa-solid fa-file-lines text-indigo-400 mr-2"></i>Job Description</span>
+                    <span class="text-slate-500 text-xs font-normal">Paste full posting text</span>
+                </h3>
+                
+                <textarea name="jd_text" id="jd_text" rows="8" x-model="jdText"
+                          class="block w-full px-3.5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brandIndigo focus:border-transparent text-sm transition-all"
+                          placeholder="Paste the full job description keywords, skills, and qualifications here to run AI comparisons..."></textarea>
+                
+                <!-- Analyze Trigger Button -->
+                <div class="mt-4 flex items-center justify-between gap-4">
+                    <button type="button" id="analyze-btn" :disabled="!isFilled()"
+                            {% if application %}
+                                hx-post="{% url 'trigger_analysis' application.id %}"
+                            {% else %}
+                                hx-post="{% url 'preview_match_unsaved' %}"
+                            {% endif %}
+                            hx-include="[name='resume'], [name='jd_text']"
+                            hx-target="#match-card-container"
+                            class="px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                            :class="isFilled() ? 'bg-indigo-600 border-indigo-500 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/10' : 'bg-darkBg border-darkBorder text-slate-500'">
+                        <i class="fa-solid fa-microchip-ai"></i> Analyze Match
+                    </button>
+                    
+                    <span x-show="!isFilled()" class="text-xs text-slate-500">
+                        <i class="fa-solid fa-info-circle mr-1"></i> Select a resume & paste JD to analyze
+                    </span>
+                </div>
+            </div>
+
+            <!-- Live Match Analysis Container -->
+            <div id="match-card-container">
+                {% if application.match %}
+                    {% include 'tracker/partials/match_analysis_card.html' with match=application.match %}
+                {% else %}
+                    <!-- Initial Placeholder State -->
+                    <div class="bg-darkCard border border-darkBorder rounded-2xl p-6 text-center text-slate-500 h-full flex flex-col items-center justify-center py-10 border-dashed">
+                        <span class="text-2xl mb-2"><i class="fa-solid fa-atom"></i></span>
+                        <h4 class="text-slate-300 font-bold text-sm">AI Match Rating Pending</h4>
+                        <p class="text-xs max-w-xs mt-1">Once you choose a resume, paste the job description, and click "Analyze Match", the Groq AI will evaluate skill fits and compute percentages.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+        </div>
+        
+        <!-- Save Actions Footer -->
+        <div class="lg:col-span-2 border-t border-darkBorder/40 pt-6 flex justify-end gap-3">
+            <a href="{% if application %}{% url 'application_detail' application.id %}{% else %}{% url 'applications_list' %}{% endif %}"
+               class="px-6 py-3 bg-darkCard border border-darkBorder hover:bg-darkBorder/40 rounded-xl transition-all text-sm font-semibold text-slate-300">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="px-6 py-3 bg-gradient-to-r from-brandPurple to-brandIndigo text-white rounded-xl shadow-xl shadow-indigo-500/20 hover:opacity-90 active:scale-95 transition-all text-sm font-bold flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Save Application
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

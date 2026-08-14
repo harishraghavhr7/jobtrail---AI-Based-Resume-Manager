@@ -1,0 +1,283 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Dashboard - JobTrail{% endblock %}
+
+{% block content %}
+<div class="space-y-8" x-data="{ polling: false }">
+    
+    <!-- Dashboard Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white">Dashboard</h1>
+            <p class="text-slate-400 text-sm mt-1">Real-time metrics and pipeline insights for your job applications.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="window.location.reload()" 
+                    class="px-4 py-2 bg-darkCard border border-darkBorder rounded-xl hover:bg-darkBorder/40 transition-colors text-sm font-medium text-slate-300 flex items-center gap-2">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+            <a href="{% url 'application_create' %}" 
+               class="px-4 py-2 bg-gradient-to-r from-brandPurple to-brandIndigo text-white rounded-xl shadow-lg shadow-indigo-500/20 hover:opacity-90 transition-all text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> New Application
+            </a>
+        </div>
+    </div>
+
+    {% if total_apps == 0 %}
+    <!-- Empty State -->
+    <div class="bg-darkCard border border-darkBorder rounded-2xl p-12 text-center max-w-xl mx-auto my-12 flex flex-col items-center">
+        <div class="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-2xl mb-4 border border-indigo-500/20">
+            <i class="fa-solid fa-folder-open"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white">No applications tracked yet</h3>
+        <p class="text-slate-400 text-sm mt-2 mb-6 max-w-xs">
+            Start organizing your job search. Upload your resume, paste a job description, and get instant AI compatibility scores!
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="{% url 'resume_manager' %}" class="px-5 py-2.5 bg-darkBg border border-darkBorder rounded-xl text-slate-300 hover:text-white hover:bg-darkBorder/30 transition-colors text-sm font-semibold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-file-arrow-up"></i> Upload Resume
+            </a>
+            <a href="{% url 'application_create' %}" class="px-5 py-2.5 bg-gradient-to-r from-brandPurple to-brandIndigo text-white rounded-xl shadow-lg shadow-indigo-500/20 hover:opacity-90 transition-all text-sm font-semibold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus"></i> Add Job Application
+            </a>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- 4 Stat Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Total Applications -->
+        <a href="{% url 'applications_list' %}" class="block bg-darkCard border border-darkBorder rounded-2xl p-6 hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300 group">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Applications</span>
+                <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform border border-blue-500/20">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-3xl font-extrabold text-white">{{ total_apps }}</span>
+                <span class="text-xs text-slate-500 block mt-1">Active postings tracked</span>
+            </div>
+        </a>
+
+        <!-- Total Interviews -->
+        <a href="{% url 'applications_list' %}?status=interview" class="block bg-darkCard border border-darkBorder rounded-2xl p-6 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 transition-all duration-300 group">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Interviews Scheduled</span>
+                <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform border border-purple-500/20">
+                    <i class="fa-solid fa-comments"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-3xl font-extrabold text-white">{{ total_interviews }}</span>
+                <span class="text-xs text-slate-500 block mt-1">Interviews & rounds</span>
+            </div>
+        </a>
+
+        <!-- Total Offers -->
+        <a href="{% url 'applications_list' %}?status=offer" class="block bg-darkCard border border-darkBorder rounded-2xl p-6 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 group">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Offers Received</span>
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform border border-emerald-500/20">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-3xl font-extrabold text-white">{{ total_offers }}</span>
+                <span class="text-xs text-slate-500 block mt-1">Successful job offers</span>
+            </div>
+        </a>
+
+        <!-- Response Rate -->
+        <div class="bg-darkCard border border-darkBorder rounded-2xl p-6 transition-all duration-300">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Response Rate</span>
+                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-3xl font-extrabold text-white">{{ response_rate }}%</span>
+                <span class="text-xs text-slate-500 block mt-1">Interviews + Offers / Applications</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Application timeline graph -->
+        <div class="bg-darkCard border border-darkBorder rounded-2xl p-6 lg:col-span-2">
+            <h3 class="text-base font-bold text-white mb-4">Application Velocity</h3>
+            <div class="relative h-72">
+                <canvas id="applicationsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Drop-off pipeline funnel -->
+        <div class="bg-darkCard border border-darkBorder rounded-2xl p-6">
+            <h3 class="text-base font-bold text-white mb-4">Pipeline Stage Funnel</h3>
+            <div class="relative h-72">
+                <canvas id="funnelChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Applications Table -->
+    <div class="bg-darkCard border border-darkBorder rounded-2xl p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-base font-bold text-white">Recent Applications</h3>
+            <a href="{% url 'applications_list' %}" class="text-sm font-semibold text-brandPurple hover:text-brandIndigo transition-colors">
+                View All <i class="fa-solid fa-arrow-right text-xs ml-1"></i>
+            </a>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="border-b border-darkBorder text-slate-400 font-semibold">
+                        <th class="pb-3 pr-4">Company</th>
+                        <th class="pb-3 px-4">Role</th>
+                        <th class="pb-3 px-4">Status</th>
+                        <th class="pb-3 px-4 text-center">Match %</th>
+                        <th class="pb-3 pl-4 text-right">Applied Date</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-darkBorder/40">
+                    {% for app in recent_applications %}
+                    <tr class="hover:bg-darkBorder/20 transition-colors cursor-pointer" onclick="window.location='{% url 'application_detail' app.id %}'">
+                        <td class="py-4 pr-4 font-semibold text-slate-100 flex items-center gap-2.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                            {{ app.company }}
+                        </td>
+                        <td class="py-4 px-4 text-slate-300">{{ app.job_role }}</td>
+                        <td class="py-4 px-4">
+                            {% if app.status == 'applied' %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Applied</span>
+                            {% elif app.status == 'oa' %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">OA</span>
+                            {% elif app.status == 'interview' or app.status == 'technical' or app.status == 'hr' %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Interview</span>
+                            {% elif app.status == 'offer' %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Offer</span>
+                            {% elif app.status == 'rejected' %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">Rejected</span>
+                            {% else %}
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">Withdrawn</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            {% if app.match %}
+                                <span class="font-bold {% if app.match.match_percentage >= 75 %}text-emerald-400{% elif app.match.match_percentage >= 50 %}text-amber-400{% else %}text-slate-400{% endif %}">
+                                    {{ app.match.match_percentage }}%
+                                </span>
+                            {% else %}
+                                <span class="text-slate-500 text-xs">Processing...</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 pl-4 text-right text-slate-400">{{ app.application_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if total_apps > 0 %}
+<!-- Chart.js scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. Applications over time (Velocity Line Chart)
+        const ctxTimeline = document.getElementById('applicationsChart').getContext('2d');
+        const gradientLine = ctxTimeline.createLinearGradient(0, 0, 0, 300);
+        gradientLine.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+        gradientLine.addColorStop(1, 'rgba(139, 92, 246, 0)');
+        
+        new Chart(ctxTimeline, {
+            type: 'line',
+            data: {
+                labels: {{ timeline_labels|safe }},
+                datasets: [{
+                    label: 'Applications',
+                    data: {{ timeline_data|safe }},
+                    borderColor: '#8B5CF6',
+                    borderWidth: 3,
+                    backgroundColor: gradientLine,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#8B5CF6',
+                    pointBorderColor: '#090D1A',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(31, 41, 61, 0.4)' },
+                        ticks: { color: '#94A3B8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(31, 41, 61, 0.4)' },
+                        ticks: { color: '#94A3B8', stepSize: 1 },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 2. Funnel Chart (Horizontal Bar Chart represent drop-off)
+        const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
+        const gradientBar = ctxFunnel.createLinearGradient(0, 0, 300, 0);
+        gradientBar.addColorStop(0, '#6366F1');
+        gradientBar.addColorStop(1, '#8B5CF6');
+
+        new Chart(ctxFunnel, {
+            type: 'bar',
+            data: {
+                labels: {{ funnel_labels|safe }},
+                datasets: [{
+                    label: 'Candidates',
+                    data: {{ funnel_data|safe }},
+                    backgroundColor: gradientBar,
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barThickness: 16
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(31, 41, 61, 0.4)' },
+                        ticks: { color: '#94A3B8', stepSize: 1 },
+                        beginAtZero: true
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#94A3B8' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,77 @@
+<!-- Header -->
+<div class="flex justify-between items-center border-b border-darkBorder/40 pb-3">
+    <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+        Delete Resume
+    </h3>
+    <button @click="deleteModal = false" class="text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<!-- Form Container -->
+<form method="POST" action="{% url 'delete_resume_confirm' resume.id %}" class="space-y-4">
+    {% csrf_token %}
+    
+    {% if has_links %}
+    <!-- Linked applications alert warning -->
+    <div class="bg-rose-500/5 border border-rose-500/20 rounded-xl p-4 space-y-1">
+        <h4 class="text-xs font-bold text-rose-400">Resume is currently linked!</h4>
+        <p class="text-xs text-slate-300">
+            This resume is linked to <strong>{{ linked_count }}</strong> job applications. You must choose how to update those listings before deleting:
+        </p>
+    </div>
+
+    <!-- Select Action -->
+    <div x-data="{ action: 'set_null' }" class="space-y-3">
+        <!-- Option 1: Dissociate -->
+        <div class="flex items-start gap-2.5 p-3 rounded-xl border border-darkBorder bg-darkBg/30 hover:bg-slate-900/30 transition-colors">
+            <input type="radio" name="action" id="action_null" value="set_null" x-model="action" checked
+                   class="rounded-full bg-darkBg border-darkBorder text-brandIndigo focus:ring-brandIndigo focus:ring-offset-darkCard w-4 h-4 cursor-pointer mt-0.5">
+            <label for="action_null" class="text-xs text-slate-300 cursor-pointer">
+                <span class="font-bold text-slate-200 block">Dissociate Applications</span>
+                Keep the applications but set their linked resume to empty (Null).
+            </label>
+        </div>
+
+        <!-- Option 2: Reassign -->
+        {% if other_resumes %}
+        <div class="flex flex-col gap-2.5 p-3 rounded-xl border border-darkBorder bg-darkBg/30 hover:bg-slate-900/30 transition-colors">
+            <div class="flex items-start gap-2.5">
+                <input type="radio" name="action" id="action_reassign" value="reassign" x-model="action"
+                       class="rounded-full bg-darkBg border-darkBorder text-brandIndigo focus:ring-brandIndigo focus:ring-offset-darkCard w-4 h-4 cursor-pointer mt-0.5">
+                <label for="action_reassign" class="text-xs text-slate-300 cursor-pointer">
+                    <span class="font-bold text-slate-200 block">Reassign Applications</span>
+                    Move the applications to another resume version.
+                </label>
+            </div>
+            
+            <div x-show="action === 'reassign'" class="pl-6 pt-1" style="display: none;">
+                <select name="reassign_to" required
+                        class="block w-full px-3 py-1.5 bg-darkBg border border-darkBorder rounded-lg text-slate-300 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <option value="">-- Choose Resume Version --</option>
+                    {% for res in other_resumes %}
+                        <option value="{{ res.id }}">{{ res.version_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- Simple confirm -->
+    <div class="py-2 text-sm text-slate-300">
+        Are you sure you want to delete resume version <strong>"{{ resume.version_name }}"</strong>? This action cannot be undone.
+    </div>
+    <input type="hidden" name="action" value="set_null">
+    {% endif %}
+
+    <!-- Footer buttons -->
+    <div class="border-t border-darkBorder/40 pt-4 flex justify-end gap-2">
+        <button type="button" @click="deleteModal = false"
+                class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors">Cancel</button>
+        <button type="submit" 
+                class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold transition-all">
+            Confirm Delete
+        </button>
+    </div>
+</form>

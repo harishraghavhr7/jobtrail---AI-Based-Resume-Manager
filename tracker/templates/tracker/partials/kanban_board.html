@@ -1,0 +1,128 @@
+<div class="flex overflow-x-auto gap-5 pb-6 scrollbar-thin select-none" style="-webkit-overflow-scrolling: touch;">
+    
+    <!-- Stage Columns -->
+    {% for col in kanban_columns %}
+    <div class="flex-shrink-0 w-80 flex flex-col bg-darkBg/30 border border-darkBorder rounded-2xl p-4">
+        
+        <!-- Column Header -->
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full {{ col.color }}"></span>
+                <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">{{ col.name }}</h3>
+            </div>
+            <!-- Count badge -->
+            <span class="px-2 py-0.5 rounded-md bg-darkBorder/80 border border-darkBorder text-slate-400 text-xs font-semibold">
+                {{ col.count }}
+            </span>
+        </div>
+
+        <!-- Kanban Column (Drop Target) -->
+        <div class="kanban-column flex-grow flex flex-col gap-3 min-h-[450px]" 
+             data-status="{{ col.status }}">
+            
+            {% for app in col.cards %}
+            <!-- Kanban Card -->
+            <div class="kanban-card cursor-grab active:cursor-grabbing bg-darkCard border border-darkBorder hover:border-indigo-500/30 rounded-xl p-4 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300"
+                 data-id="{{ app.id }}">
+                
+                <!-- Company Name and Edit option -->
+                <div class="flex justify-between items-start gap-2">
+                    <a href="{% url 'application_detail' app.id %}" class="font-bold text-slate-100 hover:text-brandIndigo transition-colors text-sm line-clamp-1">
+                        {{ app.company }}
+                    </a>
+                    <a href="{% url 'application_edit' app.id %}" class="text-slate-500 hover:text-slate-300 text-xs flex-shrink-0">
+                        <i class="fa-solid fa-pen"></i>
+                    </a>
+                </div>
+
+                <!-- Job Role -->
+                <p class="text-xs text-slate-400 mt-1 font-medium line-clamp-1">{{ app.job_role }}</p>
+
+                <!-- Footer Card details (Match score and date) -->
+                <div class="flex justify-between items-center mt-4 pt-3 border-t border-darkBorder/40">
+                    <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                        <i class="fa-regular fa-calendar mr-1"></i> {{ app.application_date|date:"M d" }}
+                    </span>
+                    
+                    {% if app.match %}
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded {% if app.match.match_percentage >= 75 %}bg-emerald-500/10 text-emerald-400{% elif app.match.match_percentage >= 50 %}bg-amber-500/10 text-amber-400{% else %}bg-slate-800 text-slate-400{% endif %}">
+                        Match: {{ app.match.match_percentage }}%
+                    </span>
+                    {% else %}
+                    <span class="text-[10px] text-slate-500 italic">No score</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <!-- Column Empty Placeholder -->
+            <div class="kanban-empty border border-dashed border-darkBorder/30 rounded-xl p-6 flex flex-col items-center justify-center text-center h-24 text-slate-600 select-none">
+                <span class="text-xs">Drag jobs here</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- SortableJS script execution -->
+<script>
+    (function() {
+        function initKanban() {
+            if (typeof Sortable === 'undefined') {
+                // If Sortable isn't loaded yet, try again in 100ms
+                setTimeout(initKanban, 100);
+                return;
+            }
+            
+            document.querySelectorAll('.kanban-column').forEach(column => {
+                new Sortable(column, {
+                    group: 'kanban',
+                    animation: 150,
+                    ghostClass: 'opacity-40',
+                    dragClass: 'opacity-90',
+                    onEnd: function(evt) {
+                        const itemEl = evt.item;
+                        const newColumn = evt.to;
+                        const oldColumn = evt.from;
+                        const id = itemEl.getAttribute('data-id');
+                        const newStatus = newColumn.getAttribute('data-status');
+                        
+                        // If same column, do nothing
+                        if (newColumn === oldColumn) return;
+                        
+                        // Send POST update to server
+                        const formData = new FormData();
+                        formData.append('status', newStatus);
+                        
+                        fetch(`/applications/${id}/status/`, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            }
+                        }).then(response => {
+                            if (!response.ok) {
+                                alert('Error updating application status');
+                                window.location.reload();
+                            }
+                        }).catch(err => {
+                            console.error(err);
+                            window.location.reload();
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Load SortableJS if not present
+        if (!document.getElementById('sortable-js-script')) {
+            const script = document.createElement('script');
+            script.id = 'sortable-js-script';
+            script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js';
+            script.onload = initKanban;
+            document.head.appendChild(script);
+        } else {
+            initKanban();
+        }
+    })();
+</script>
