@@ -36,6 +36,7 @@ jobs:
       DATABASE_URL: sqlite:///test_db.sqlite3
       CELERY_TASK_ALWAYS_EAGER: "True"
       GROQ_API_KEY: dummy-key-for-tests
+      GROQ_MODEL: llama-3.3-70b-versatile
       REDIS_URL: redis://localhost:6379/0
 
     steps:
@@ -173,13 +174,18 @@ jobs:
             docker rm   jobtrail 2>/dev/null || true
 
             echo "🚀 Starting new container..."
+            # Create media directory on host if it doesn't exist (persists across deploys)
+            mkdir -p /home/${{ secrets.EC2_USER }}/jobtrail_media
+
             docker run -d \
               --name jobtrail \
               --restart unless-stopped \
               -p 8000:8000 \
+              -v /home/${{ secrets.EC2_USER }}/jobtrail_media:/app/media \
               -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
               -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
               -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+              -e ALLOWED_HOSTS="${{ secrets.EC2_HOST }}" \
               -e DEBUG="False" \
               -e CELERY_TASK_ALWAYS_EAGER="True" \
               -e REDIS_URL="${{ secrets.REDIS_URL }}" \

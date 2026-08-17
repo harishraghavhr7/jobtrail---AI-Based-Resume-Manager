@@ -8,6 +8,7 @@ urlpatterns = [
     path('', include('tracker.urls')),
 ]
 
-# Expose uploaded media (resumes) in local development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media files (resumes) in all environments
+# In production, media is stored at MEDIA_ROOT and served directly by Django/gunicorn
+# For persistent storage across deploys, mount a Docker volume: -v /home/ubuntu/jobtrail_media:/app/media
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
