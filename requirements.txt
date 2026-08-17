@@ -10,4 +10,4 @@ django-celery-results
 gunicorn
 dj-database-url
 psycopg2-binary
-whitenoise
+whitenoise==6.11.0
