@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Profile, Resume, Application, MatchAnalysis, StatusHistory
 from .tasks import extract_resume_skills_task, analyze_match_task
-from .services import analyze_match
+from .services import analyze_match, extract_text_from_file, extract_resume_skills
 
 # ----------------- AUTHENTICATION VIEWS -----------------
 
