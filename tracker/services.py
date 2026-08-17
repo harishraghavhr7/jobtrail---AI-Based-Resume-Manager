@@ -90,12 +90,12 @@ def clean_and_parse_json(text):
 
 def get_groq_client():
     """
-    Returns an initialized Groq client if the API key is configured.
-    Otherwise returns None to signify mock mode.
+    Returns an initialized Groq client if the API key is a real key (starts with 'gsk_').
+    Otherwise returns None to activate mock/fallback mode.
+    All genuine Groq API keys begin with the 'gsk_' prefix.
     """
     api_key = getattr(settings, 'GROQ_API_KEY', '')
-    # Check if the API key is set to a placeholder
-    if not api_key or api_key.startswith('gsk_your_default') or api_key.startswith('your_groq_api_key'):
+    if not api_key or not api_key.startswith('gsk_'):
         return None
     try:
         return Groq(api_key=api_key)
