@@ -149,7 +149,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: http://${{ secrets.EC2_HOST }}
 
     steps:
       - name: 🚀 SSH into EC2 and redeploy
