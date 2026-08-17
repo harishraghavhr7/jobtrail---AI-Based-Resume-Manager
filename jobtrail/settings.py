@@ -63,13 +63,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'jobtrail.wsgi.application'
 
 # Database
-# Dynamically use PostgreSQL on Render (via DATABASE_URL env var) or SQLite locally
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
-    )
-}
+# Dynamically use PostgreSQL (via DATABASE_URL env var) or SQLite fallback
+db_url = os.environ.get('DATABASE_URL', '').strip()
+if db_url:
+    DATABASES = {
+        'default': dj_database_url.parse(db_url, conn_max_age=600)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 
 # Production Static Files Storage (WhiteNoise)
 STORAGES = {
