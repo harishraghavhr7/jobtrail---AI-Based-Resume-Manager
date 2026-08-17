@@ -1,0 +1,200 @@
+name: CI/CD Pipeline — JobTrail
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/jobtrail
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1 — Lint & Test (CI)
+  # Runs on every push and every PR to main
+  # ─────────────────────────────────────────────
+  test:
+    name: 🧪 Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-secret-key-not-for-production
+      DEBUG: "True"
+      DATABASE_URL: sqlite:///test_db.sqlite3
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      GROQ_API_KEY: dummy-key-for-tests
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      - name: 🔍 Lint with flake8
+        run: |
+          # Stop build on critical errors (syntax errors, undefined names)
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics \
+            --exclude=venv,migrations,staticfiles,__pycache__,.git
+          # Style warnings — does NOT fail the build
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 \
+            --statistics --exclude=venv,migrations,staticfiles,__pycache__,.git
+
+      - name: 🗃️ Run database migrations
+        run: python manage.py migrate --noinput
+
+      - name: ✅ Run test suite
+        run: python manage.py test tracker --verbosity=2
+
+      - name: 📊 Upload test failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-logs
+          path: |
+            *.log
+            test_db.sqlite3
+
+  # ─────────────────────────────────────────────
+  # JOB 2 — Build & Push Docker image to Docker Hub
+  # Only runs on push to main (never on PRs)
+  # ─────────────────────────────────────────────
+  build-and-push:
+    name: 🐳 Build & Push to Docker Hub
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    outputs:
+      image: ${{ secrets.DOCKERHUB_USERNAME }}/jobtrail:${{ github.sha }}
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🗃️ Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: 🔑 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 🐳 Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKERHUB_IMAGE }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: 🔄 Rotate build cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: 📋 Print pushed image tags
+        run: |
+          echo "✅ Image pushed to Docker Hub:"
+          echo "   ${{ env.DOCKERHUB_IMAGE }}:${{ env.IMAGE_TAG }}"
+          echo "   ${{ env.DOCKERHUB_IMAGE }}:latest"
+
+  # ─────────────────────────────────────────────
+  # JOB 3 — Deploy to EC2 via SSH
+  # SSHs into the EC2 instance, pulls the new
+  # image from Docker Hub, and hot-swaps the
+  # running container with zero manual steps.
+  # ─────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: http://${{ secrets.EC2_HOST }}
+
+    steps:
+      - name: 🚀 SSH into EC2 and redeploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            echo "🔑 Logging in to Docker Hub..."
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
+              docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+            echo "📥 Pulling latest image..."
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/jobtrail:${{ github.sha }}
+
+            echo "🛑 Stopping old container (if running)..."
+            docker stop jobtrail 2>/dev/null || true
+            docker rm   jobtrail 2>/dev/null || true
+
+            echo "🚀 Starting new container..."
+            docker run -d \
+              --name jobtrail \
+              --restart unless-stopped \
+              -p 8000:8000 \
+              -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+              -e DEBUG="False" \
+              -e CELERY_TASK_ALWAYS_EAGER="True" \
+              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/jobtrail:${{ github.sha }}
+
+            echo "🧹 Pruning dangling images..."
+            docker image prune -f
+
+            echo "✅ Container status:"
+            docker ps --filter name=jobtrail --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+      - name: ✅ Deployment summary
+        run: |
+          echo "🎉 JobTrail deployed successfully to EC2!"
+          echo "Image : ${{ secrets.DOCKERHUB_USERNAME }}/jobtrail:${{ github.sha }}"
+          echo "Host  : ${{ secrets.EC2_HOST }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor : ${{ github.actor }}"
